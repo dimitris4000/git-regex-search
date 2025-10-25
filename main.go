@@ -28,10 +28,24 @@ func commandExists(cmd string) bool {
 	return err == nil
 }
 
-func grepRepo(repoPath, pattern string) ([]string, error) {
+func grepRepo(repoPath, pattern string, includeGlobs, excludeGlobs []string) ([]string, error) {
 	var cmd *exec.Cmd
 	if commandExists("rg") {
-		cmd = exec.Command("rg", "-n", "-uu", "--pcre2", pattern)
+		args := []string{"-n", "-uu", "--pcre2"}
+		for _, g := range includeGlobs {
+			if strings.TrimSpace(g) == "" {
+				continue
+			}
+			args = append(args, "--glob", g)
+		}
+		for _, g := range excludeGlobs {
+			if strings.TrimSpace(g) == "" {
+				continue
+			}
+			args = append(args, "--glob", "!"+g)
+		}
+		args = append(args, pattern)
+		cmd = exec.Command("rg", args...)
 	} else {
 		cmd = exec.Command("grep", "-rnE", pattern, ".")
 	}
@@ -68,6 +82,14 @@ func main() {
 				Name:  "branches",
 				Usage: "Comma-separated list of branches to search (optional)",
 			},
+			&cli.StringSliceFlag{
+				Name:  "include-glob",
+				Usage: "Include only files/dirs matching glob (ripgrep only). Repeatable.",
+			},
+			&cli.StringSliceFlag{
+				Name:  "exclude-glob",
+				Usage: "Exclude files/dirs matching glob (ripgrep only). Repeatable.",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			repoPath, err := filepath.Abs(c.String("repo"))
@@ -77,6 +99,8 @@ func main() {
 
 			regex := c.String("regex")
 			branchesArg := c.String("branches")
+			includeGlobs := c.StringSlice("include-glob")
+			excludeGlobs := c.StringSlice("exclude-glob")
 
 			// Ensure repo exists
 			if _, err := os.Stat(filepath.Join(repoPath, ".git")); os.IsNotExist(err) {
@@ -93,6 +117,11 @@ func main() {
 			fmt.Printf("🔍 Search pattern: %s\n", regex)
 			fmt.Printf("🌿 Current branch: %s\n", currentBranch)
 			fmt.Println()
+
+			// Warn if include/exclude globs provided but ripgrep is not available
+			if (len(includeGlobs) > 0 || len(excludeGlobs) > 0) && !commandExists("rg") {
+				fmt.Println("⚠️  Warning: include/exclude glob options require 'rg' (ripgrep). Options will be ignored because 'rg' was not found in PATH.")
+			}
 
 			// Stash changes
 			fmt.Println("💾 Stashing uncommitted changes...")
@@ -134,11 +163,11 @@ func main() {
 					continue
 				}
 
-				fmt.Printf("🔍 Searching branch: %s\n", branchColor(branch))
+				fmt.Printf("\n🔍 Searching branch: %s\n", branchColor(branch))
 				_, _ = runGitCmd(repoPath, "checkout", branch)
 				fmt.Printf("📥 Pulling latest changes for %s...\n", branchColor(branch))
 				_, _ = runGitCmd(repoPath, "pull", "origin", branch)
-				matches, err := grepRepo(repoPath, regex)
+				matches, err := grepRepo(repoPath, regex, includeGlobs, excludeGlobs)
 				if err != nil {
 					return fmt.Errorf("search failed on branch %s: %v", branch, err)
 				}
