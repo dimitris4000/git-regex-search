@@ -86,11 +86,11 @@ for platform in "${platforms[@]}"; do
     
     echo "  📦 Building static binary for $GOOS/$GOARCH..."
     if [ $GOOS = "linux" ]; then
-        # Build static binary for Linux
-        GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'" -o $output_name
+        # Build static binary for Linux, injecting version into main.version
+        GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static' -X main.version=$VERSION" -o $output_name
     else
-        # Build regular binary for other platforms
-        GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags="-s -w" -o $output_name
+        # Build regular binary for other platforms, injecting version into main.version
+        GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=$VERSION" -o $output_name
     fi
     
     if [ $? -ne 0 ]; then

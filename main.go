@@ -13,6 +13,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// version is injected at build time via -ldflags "-X main.version=<version>"
+var version = "dev"
+
 func runGitCmd(repoPath string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = repoPath
@@ -65,8 +68,9 @@ func grepRepo(repoPath, pattern string, includeGlobs, excludeGlobs []string) ([]
 
 func main() {
 	app := &cli.App{
-		Name:  "git-regex-search",
-		Usage: "Search for regex matches across branches in a git repository",
+		Name:    "git-regex-search",
+		Usage:   "Search for regex matches across branches in a git repository",
+		Version: version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "repo",
