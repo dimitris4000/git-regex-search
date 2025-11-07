@@ -8,9 +8,9 @@ on:
         required: true
         type: string
       branch:
-        description: 'Branch to release from (default: main)'
+        description: 'Branch to release from (default: master)'
         required: false
-        default: 'main'
+        default: 'master'
         type: string
 
 jobs:
