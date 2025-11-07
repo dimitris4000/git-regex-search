@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      branch:
+        description: 'Branch to release from (default: main)'
+        required: false
+        default: 'main'
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0  # Fetch all history for proper tagging
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: Check if release already exists
+        id: check_release
+        run: |
+          if gh release list | grep -q "^${{ github.event.inputs.version }}"; then
+            echo "❌ Error: Release ${{ github.event.inputs.version }} already exists"
+            exit 1
+          else
+            echo "✅ Release ${{ github.event.inputs.version }} does not exist, proceeding..."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Make release
+        run: |
+          chmod +x release.sh
+          ./release.sh ${{ github.event.inputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
