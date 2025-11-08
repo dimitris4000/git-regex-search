@@ -41,6 +41,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure clean working directory
+        run: |
+          # Check if there are uncommitted changes
+          if ! git diff-index --quiet HEAD --; then
+            echo "⚠️  Found uncommitted changes, stashing them..."
+            git stash push -u -m "Auto-stash before release ${{ github.event.inputs.version }}"
+            echo "✅ Changes stashed successfully"
+          else
+            echo "✅ Working directory is clean"
+          fi
+
       - name: Make release
         run: |
           chmod +x release.sh
